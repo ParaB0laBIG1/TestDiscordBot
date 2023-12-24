@@ -35,6 +35,12 @@ class ReportCommand(commands.Cog):
     async def report(self, inter, user: disnake.User, message: str):
         channel = self.bot.get_channel(REPORT_CHANNEL_ID)
 
+        ADMIN_ID = 1188484736977473625
+        MODER_ID = 1188484736977473619
+
+        admin_role = inter.guild.get_role(ADMIN_ID)
+        moder_role = inter.guild.get_role(MODER_ID)
+
         embed = disnake.Embed(
             title="Report",
             color=disnake.Colour.yellow(),
@@ -50,10 +56,18 @@ class ReportCommand(commands.Cog):
         if self.get_complaints_from_db(inter.author.id):
             await inter.response.send_message('Перед тем как отправить новую жалобу, дождитесь рассмотрения предыдущей!', ephemeral=True)
         else:
+            # Упоминаем админа и модера
+            admin_mention = admin_role.mention if admin_role else "Администратор не найден"
+            moder_mention = moder_role.mention if moder_role else "Модератор не найден"
+
+            await channel.send(f"{admin_mention} {moder_mention} Поступила новая жалоба!", embed=embed)
+            
             await inter.response.send_message("Жалоба успешно отправлена. Администрация рассмотрит ее в ближайшее время.", ephemeral=True)
             await channel.send(embed=embed, view=TakeReportButton(bot=self.bot, submitter_mention=self.submitter_mention))
 
+
             self.save_complaints_in_db(user_id=inter.author.id, complaint_from=inter.author.mention, complaint_to=user.mention, status="without checking")
+
 
 
 class TakeReportButton(disnake.ui.View):
