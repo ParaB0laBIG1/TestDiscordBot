@@ -1,8 +1,9 @@
 import disnake
 import asyncio
 from disnake.ext import commands
-from config import MODER_ROLE_ID, ADMIN_ROLE_ID, overwrite_text_and_voice, TIMEOUT_ROLE_ID, CHANNEL_HISTORY_PUNISHMENTS_ID, REPORT_CHANNEL_ID
+from config import MODER_ROLE_ID, ADMIN_ROLE_ID, overwrite_text_and_voice, TIMEOUT_ROLE_ID, CHANNEL_HISTORY_PUNISHMENTS_ID
 from embeds.embeds import seding_mute_logs, answer_embed
+from checking_perm import CheckPermissions
 
 allowed_role_ids = [MODER_ROLE_ID, ADMIN_ROLE_ID]
 
@@ -26,27 +27,32 @@ class TimeOut():
         """
         issuing mute
         """
+        self.check_perm = CheckPermissions(inter, command="mute")
+
         self.role_timeout = inter.guild.get_role(TIMEOUT_ROLE_ID)
         self.time_letter = time[-3:]
         self.time_seconds = await self.convert_to_seconds(time, self.time_letter)
-        log_channel = self.bot.get_channel(CHANNEL_HISTORY_PUNISHMENTS_ID)
+        self.logs_channel = self.bot.get_channel(CHANNEL_HISTORY_PUNISHMENTS_ID)
 
-        if any(role.id in allowed_role_ids for role in inter.author.roles):
+        if await self.check_perm.check_permissions_on_mute(member):
             if channel:
-                await self.mute_in_channel(inter, member, time, self.time_letter, channel, logs_channel=log_channel, reason=reason)
+                await self.mute_in_channel(inter, member, time, self.time_letter, channel)
+                await self.logs_channel.send(embed=await seding_mute_logs(inter=inter, member=member, reason=reason, time=time, channel=channel))
             else:
                 await self.mute_in_all_channels(inter, member, time, self.time_letter, channel)
+                await self.logs_channel.send(embed=await seding_mute_logs(inter=inter, member=member, reason=reason, time=time, channel=channel))
         else:
             await inter.response.send_message(embed=await answer_embed(error=True, text="Не достаточно прав", description="Извините, но у вас нету подходящей роли для использувание этой команды"))
 
-    async def mute_in_channel(self, inter, member, time, time_letter, channel, logs_channel, reason):
+    async def mute_in_channel(self, inter, member, time, time_letter, channel):
+        """
+            mute in channel
+        """
         await asyncio.sleep(1)
         if time_letter in time_values:
             await channel.set_permissions(member, overwrite=overwrite_text_and_voice)
             asyncio.create_task(self.remove_mute_after_delay(inter, member, channel, self.time_seconds))
             await inter.response.send_message(content=f"{member.mention} был успешно ограничен в отправке сообщений на {time} в канале {channel.name}.", ephemeral=True)
-            
-            await logs_channel.send(embed=await seding_mute_logs(inter=inter, member=member, reason=reason, time=time))
 
         else:
             await inter.response.send_message(content=f"Недопустимое значение времени: {time}")

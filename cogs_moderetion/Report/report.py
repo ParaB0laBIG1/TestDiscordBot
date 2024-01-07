@@ -4,7 +4,7 @@ import sqlite3
 from disnake.ext import commands
 from disnake import ButtonStyle
 from disnake import TextInputStyle
-from config import REPORT_CHANNEL_ID, SERVER_ID, CHANNEL_HISTORY_PUNISHMENTS_ID
+from config import REPORT_CHANNEL_ID, SERVER_ID, ID_COMMAND_CHANNEL
 
 conn = sqlite3.connect('database\complaints.db')
 c = conn.cursor()
@@ -65,17 +65,13 @@ class ReportCommand(commands.Cog):
             await inter.response.send_message("Жалоба успешно отправлена. Администрация рассмотрит ее в ближайшее время.", ephemeral=True)
             await channel.send(embed=embed, view=TakeReportButton(bot=self.bot, submitter_mention=self.submitter_mention))
 
-
             self.save_complaints_in_db(user_id=inter.author.id, complaint_from=inter.author.mention, complaint_to=user.mention, status="without checking")
-
-
 
 class TakeReportButton(disnake.ui.View):
     def __init__(self, bot: commands.Bot, submitter_mention: str):
         super().__init__()
 
         self.bot = bot
-        self.verdict = VerdictMessage(self.bot)
         self.pressing = False
         self.submitter_mention = submitter_mention
 
@@ -85,58 +81,30 @@ class TakeReportButton(disnake.ui.View):
 
     @disnake.ui.button(label='Взять на рассмотрение', style=ButtonStyle.green, custom_id='take_report')
     async def take_report_button(self, button: disnake.ui.Button, inter):
-        channel = self.bot.get_channel(REPORT_CHANNEL_ID)
+        channel = self.bot.get_channel(ID_COMMAND_CHANNEL)
+        self.close_report = CloseReport(bot=self.bot)
 
         if not self.pressing:
             taken_message = f"{inter.author.mention} взял(а) заявку на рассмотрение"
+            message = f"Пожалуста, перейдите в канал {channel.mention} выдайте наказание нарушителю командой, и ТОЛЬКО после этого нажмите на кнопку 'Закрыть жалобу'!!!"
+
             self.delete_complaints_from_db(user_id=self.submitter_mention)
             await inter.channel.send(taken_message)
-            await inter.response.send_message("Пожалуста выберите какой приговор вынести нарушителю", view=self.verdict, ephemeral=True)
+            await inter.response.send_message(message, view=self.close_report, ephemeral=True)
             self.pressing = True
         else:
             await inter.response.send_message("Жалоба уже взята на рассмотрение", ephemeral=True)
 
-
-class VerdictMessage(disnake.ui.View):
+class CloseReport(disnake.ui.View):
     def __init__(self, bot: commands.Bot):
         super().__init__()
-
-        self.bot = bot
-
-    @disnake.ui.button(label='Вердикт', style=ButtonStyle.green, custom_id='verdict_id')
-    async def send_message_for_verdict(self, button: disnake.ui.Button, inter):
-        await inter.response.send_modal(modal=VerdictModal(self.bot))
-
-class VerdictModal(disnake.ui.Modal):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-
-        components = [
-            disnake.ui.TextInput(
-                label="Ник", placeholder="Ник нарушителя", style=TextInputStyle.short, custom_id="Ник нарушителя", max_length=50,
-            ),
-            disnake.ui.TextInput(
-                label="Наказание", placeholder="Какое наказание вы дали?", custom_id="Наказание", style=TextInputStyle.short,
-            ),
-            disnake.ui.TextInput(
-                label="Нарушения",  placeholder="Какое было нарушения?", custom_id="Описания нарушения", style=TextInputStyle.paragraph,
-            ),
-        ]
-        super().__init__(title="Create Tag", custom_id="create_tag", components=components)
-
-
-    async def callback(self, inter: disnake.ModalInteraction):
-        channel = self.bot.get_channel(CHANNEL_HISTORY_PUNISHMENTS_ID)
-        embed = disnake.Embed(title="Отчет")
         
-        for key, value in inter.text_values.items():
-            embed.add_field(
-                name=key,
-                value=value[:1024],
-                inline=False,
-            )
-        await inter.response.send_message("Вердикт был отправлен в журнал", ephemeral=True)
-        await channel.send(embed=embed)
+        self.bot = bot
+
+    @disnake.ui.button(label='Закрыть жалобу', style=ButtonStyle.green, custom_id='close_report')
+    async def close_report(self, button: disnake.ui.Button, inter):
+        await inter.response.send_message(f"{inter.author.mention} закрыл(а) жалобу")
+
 
 def setup(bot: commands.Bot):
     bot.add_cog(ReportCommand(bot))

@@ -1,13 +1,20 @@
 import disnake
 import youtube_dl
+import asyncio
 from disnake.ext import commands
-from disnake import VoiceChannel, FFmpegPCMAudio
-from disnake.ext.commands import Bot
 from config import SERVER_ID
+
 
 class Music(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        
+        self.voice_clients = {}
+        
+        self.ydl_options = {"format": 'bestaudio/best'}
+        self.ytdl = youtube_dl.YoutubeDL(self.ydl_options)
+        self.ffmpeg_options = { 'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn', }
+
 
     @commands.slash_command(
         guild_ids=[SERVER_ID],
@@ -16,36 +23,20 @@ class Music(commands.Cog):
     )
     async def play(self, inter, url: str):
         try:
-            voice_channel = inter.author.voice.channel
-            await inter.response.send_message("Включаю музыку")
-        
-            if voice_channel:
-                voice_channel: VoiceChannel = await voice_channel.connect()
 
-                ydl_opts = {
-                    'format': 'bestaudio/best',
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': 'mp3',
-                        'preferredquality': '192',
-                    }],
-                }
+            voice_client = await inter.author.voice.channel.connect()
+            self.voice_clients[voice_client.guild.id] = voice_client
 
-                with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(url, download=False)
-                    url2 = info['formats'][0]['url']
+            loop = asyncio.get_event_loop()
+            data = await loop.run_in_executor(None, lambda: self.ytdl.extract_info(url, download=False))
 
-                voice_client = disnake.utils.get(self.bot.voice_clients, guild=inter.guild)
+            song = data["url"]
+            player = disnake.FFmpegPCMAudio(song, **self.ffmpeg_options)
 
-                if voice_client and not voice_client.is_playing():
-                    voice_client.play(disnake.FFmpegPCMAudio(url2), after=lambda e: print('done', e))
-                    await inter.send(f'Now playing: {url}')
-        
-                else:
-                    await inter.response.send_message("Bot is already playing or you are not in a voice channel!")
+            voice_client.play(player)
 
         except Exception as e:
-            print(f"Ошибка: {e}")
+            print(e)
 
 def setup(bot):
     bot.add_cog(Music(bot))
