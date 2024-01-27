@@ -16,10 +16,12 @@ class KickCommand(commands.Cog):
         description="Кикнуть человека с сервера"
     )
     @commands.cooldown(30, 86400, commands.BucketType.user)
-    async def kick(self, inter, member: disnake.User, reason):
+    async def kick(self, inter, участник: disnake.User, причина):
         """
         kick a member from the server
         """
+        member = участник
+        reason = причина
         self.check_perm = CheckPermissions(inter=inter, command="kick")
         self.logs_channel = self.bot.get_channel(CHANNEL_HISTORY_PUNISHMENTS_ID)
 
@@ -29,8 +31,8 @@ class KickCommand(commands.Cog):
                 await inter.send(f"{member} был успешно кикнут с сервера")
                 await self.logs_channel.send(embed=await seding_kick_logs(inter=inter, member=member, reason=reason))
             else:
-                await inter.response.send_message(embed=await answer_embed(error=True, text="Не достаточно прав", 
-                        description="Извините, но у вас нету подходящей роли для использувание этой команды"))
+                await inter.response.send_message(embed=await answer_embed(title="Ограничения",error=True, text="Не достаточно прав", 
+                        description="Извините, но у вас нету подходящей роли для использувание этой команды"), ephemeral=True)
         except Exception as e:
             print(f"Ошибка: {e}")
 
@@ -40,8 +42,9 @@ class KickCommand(commands.Cog):
             Error handler
         """
         if isinstance(error, commands.CommandOnCooldown):
-            await inter.response.send_message(embed=await answer_embed(text="Извините, но в день можно кикнуть только 10 человек",
-                                                        description="Подождите 24 часа перед новым использованием, также в целях безопасности будет снята роль(свяжитесь  с администацией)", error=True), ephemeral=True)
+            await inter.response.send_message(embed=await answer_embed(title="Ограничения", text="Извините, но в день можно кикнуть только 10 человек",
+                                                        description="Подождите 24 часа перед новым использованием, также в целях безопасности будет снята роль(свяжитесь  с администацией для дополнительной информации)", error=True), ephemeral=True)
+            self.check_perm.remove_admin_roles(member=inter.author)
 
 def setup(bot: commands.Bot):
     bot.add_cog(KickCommand(bot))   

@@ -22,7 +22,7 @@ bot.load_extension("cogs_moderetion.BanCommand.ban")
 
 bot.load_extension("cogs_rank.rank_system")
 
-bot.load_extension("cogs_music.play_command")
+bot.load_extension("cogs_music.MusicModule.music_module")
 
 
 bot.run(token)

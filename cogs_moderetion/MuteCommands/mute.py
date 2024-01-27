@@ -30,11 +30,14 @@ class MuteCommands(commands.Cog):
         description="Мут участника",
     )
     @commands.cooldown(30, 86400, commands.BucketType.user)
-    async def mute(self, inter, member: disnake.User, time: str, reason: str, channel: disnake.TextChannel = None):
+    async def mute(self, inter, участник: disnake.User, время: str, причина: str, канал: disnake.TextChannel = None):
         """
         Command for issuing timeout
         """
-
+        member = участник
+        reason = причина
+        channel = канал
+        time = время
         try:
             if member == inter.author:
                 await inter.response.send_message("Вы не можете использовать команду на себе!", ephemeral=True)
@@ -49,7 +52,7 @@ class MuteCommands(commands.Cog):
     @mute.error
     async def mute_error(self, inter, error):
         if isinstance(error, commands.CommandOnCooldown):
-            await inter.response.send_message(embed=await answer_embed(text="Извините, но в день можно наложить только 30 мутов",
+            await inter.response.send_message(embed=await answer_embed(title="Ограничения",text="Извините, но в день можно наложить только 30 мутов",
                                                         description="Подождите 24 часа перед новым использованием", error=True), ephemeral=True)
 
 def setup(bot: commands.Bot):

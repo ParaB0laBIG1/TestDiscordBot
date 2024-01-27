@@ -12,8 +12,10 @@ class RemoveModerCommand(commands.Cog):
         name="remove_moder",
         description="Снять с модерки"
     )
-    async def remove_moder(self, inter, member: disnake.Member):
+    async def remove_moder(self, inter, участник: disnake.Member):
         self.roly_moder = inter.guild.get_role(MODER_ROLE_ID)
+
+        member = участник
 
         if await self.check_admin_role(inter):
             if not await self.check_moder_role(member):

@@ -33,7 +33,7 @@ class SetRole(commands.Cog):
         if self.main_role in inter.author.roles:
             await self.new_role(inter=inter)
         else:
-            await inter.response.send_message("У вас нету права на эту команду")
+            await inter.response.send_message("У вас нету права на эту команду", ephemeral=True)
             
     async def new_role(self, inter):
         guild = inter.guild
@@ -51,7 +51,7 @@ class SetRole(commands.Cog):
                 if new_role:
                     await member.add_roles(new_role)
 
-            await inter.response.send_message("Роли успешно обновлены")
+            await inter.response.send_message("Роли успешно обновлены", ephemeral=True)
         except Exception as e:
             print(f"Произошла ошибка: {e}")
             await inter.response.send_message("Произошла ошибка, проверьте правильность использования команды", ephemeral=True)

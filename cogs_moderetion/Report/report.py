@@ -3,8 +3,7 @@ import datetime
 import sqlite3
 from disnake.ext import commands
 from disnake import ButtonStyle
-from disnake import TextInputStyle
-from config import REPORT_CHANNEL_ID, SERVER_ID, ID_COMMAND_CHANNEL
+from config import REPORT_CHANNEL_ID, SERVER_ID, ID_COMMAND_CHANNEL, ADMIN_ROLE_ID, MODER_ROLE_ID
 
 conn = sqlite3.connect('database\complaints.db')
 c = conn.cursor()
@@ -32,14 +31,14 @@ class ReportCommand(commands.Cog):
         name="report",
         description="Репорт на участника",
     )
-    async def report(self, inter, user: disnake.User, message: str):
+    async def report(self, inter, участник: disnake.User, жалоба: str):
+        member = участник
+        message = жалоба
+
         channel = self.bot.get_channel(REPORT_CHANNEL_ID)
 
-        ADMIN_ID = 1188484736977473625
-        MODER_ID = 1188484736977473619
-
-        admin_role = inter.guild.get_role(ADMIN_ID)
-        moder_role = inter.guild.get_role(MODER_ID)
+        admin_role = inter.guild.get_role(ADMIN_ROLE_ID)
+        moder_role = inter.guild.get_role(MODER_ROLE_ID)
 
         embed = disnake.Embed(
             title="Report",
@@ -48,7 +47,7 @@ class ReportCommand(commands.Cog):
         )
 
         embed.add_field(name="Подал:", value=f"{inter.author.mention}")
-        embed.add_field(name="Подали на:", value=f"{user.mention}")
+        embed.add_field(name="Подали на:", value=f"{member.mention}")
         embed.add_field(name="Причина:", value=f"{message}")
 
         self.submitter_mention = inter.author.id
@@ -65,7 +64,7 @@ class ReportCommand(commands.Cog):
             await inter.response.send_message("Жалоба успешно отправлена. Администрация рассмотрит ее в ближайшее время.", ephemeral=True)
             await channel.send(embed=embed, view=TakeReportButton(bot=self.bot, submitter_mention=self.submitter_mention))
 
-            self.save_complaints_in_db(user_id=inter.author.id, complaint_from=inter.author.mention, complaint_to=user.mention, status="without checking")
+            self.save_complaints_in_db(user_id=inter.author.id, complaint_from=inter.author.mention, complaint_to=member.mention, status="without checking")
 
 class TakeReportButton(disnake.ui.View):
     def __init__(self, bot: commands.Bot, submitter_mention: str):

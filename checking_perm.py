@@ -1,4 +1,7 @@
 import json
+import disnake
+from disnake import guild
+from config import ADMIN_ROLE_ID, MAIN_ADMIN_ROLE_ID
 
 
 class CheckPermissions():
@@ -40,3 +43,18 @@ class CheckPermissions():
 
     async def check_perm_on_kick_and_ban(self, member):
         return await self.check_permissions(member, [self.admin_role_id, self.main_admin_role_id, self.main_role_id])
+    
+    async def remove_admin_roles(self, member):
+        self.member_roles = {role.id for role in member.roles}
+
+        admin_role = disnake.utils.get(member.guild.roles, id=self.admin_role_id)
+        main_admin_role = disnake.utils.get(member.guild.roles, id=self.main_admin_role_id)
+
+        if any(role_id in self.member_roles for role_id in [self.admin_role_id, self.main_admin_role_id]):
+            if self.admin_role_id in self.member_roles:
+                await member.remove_roles(admin_role)
+            elif self.main_admin_role_id in self.member_roles:
+                await member.remove_roles(main_admin_role)
+            
+            return False
+        return False

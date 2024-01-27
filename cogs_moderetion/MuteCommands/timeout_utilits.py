@@ -1,21 +1,12 @@
 import disnake
 import asyncio
 from disnake.ext import commands
-from config import MODER_ROLE_ID, ADMIN_ROLE_ID, overwrite_text_and_voice, TIMEOUT_ROLE_ID, CHANNEL_HISTORY_PUNISHMENTS_ID
-from embeds.embeds import seding_mute_logs, answer_embed
+from config import MODER_ROLE_ID, ADMIN_ROLE_ID, overwrite_text_and_voice, TIMEOUT_ROLE_ID, CHANNEL_HISTORY_PUNISHMENTS_ID, time_values, convert_to_seconds
+from embeds.embeds import seding_mute_logs, answer_embed, seding_warning_in_logs
 from checking_perm import CheckPermissions
 
 allowed_role_ids = [MODER_ROLE_ID, ADMIN_ROLE_ID]
 
-time_values = {
-    "мин": lambda x: x * 60,
-    "час": lambda x: x * 3600,
-    "день": lambda x: x * 86400,
-    "неделя": lambda x: x * 604800,
-    "мес": lambda x: x * 2629746,
-    "год": lambda x: x * 31556952,
-    "сек": lambda x: x,
-}
 
 class TimeOut():
     def __init__(self, bot: commands.Bot):
@@ -31,7 +22,7 @@ class TimeOut():
 
         self.role_timeout = inter.guild.get_role(TIMEOUT_ROLE_ID)
         self.time_letter = time[-3:]
-        self.time_seconds = await self.convert_to_seconds(time, self.time_letter)
+        self.time_seconds = await convert_to_seconds(time, self.time_letter)
         self.logs_channel = self.bot.get_channel(CHANNEL_HISTORY_PUNISHMENTS_ID)
 
         if await self.check_perm.check_permissions_on_mute(member):
@@ -42,7 +33,11 @@ class TimeOut():
                 await self.mute_in_all_channels(inter, member, time, self.time_letter, channel)
                 await self.logs_channel.send(embed=await seding_mute_logs(inter=inter, member=member, reason=reason, time=time, channel=channel))
         else:
-            await inter.response.send_message(embed=await answer_embed(error=True, text="Не достаточно прав", description="Извините, но у вас нету подходящей роли для использувание этой команды"))
+            await inter.response.send_message(embed=await answer_embed(title="Ограничения",error=True, text="Не достаточно прав", 
+                                description="Извините, но у вас нету подходящей роли для использувание этой команды"), ephemeral=True)
+            await self.logs_channel.send(embed=await seding_warning_in_logs(name="Предупреждения", 
+                                        value=f"{inter.author.mention} попытался выдать мут участнику {member.mention}"))
+
 
     async def mute_in_channel(self, inter, member, time, time_letter, channel):
         """
@@ -77,14 +72,9 @@ class TimeOut():
         await asyncio.sleep(time_seconds)
         if channel:
             await channel.set_permissions(member, overwrite=None)
-            await inter.followup.send(f"{member.mention} больше не ограничен в отправке сообщений в канале {channel.name}.")
+            await self.logs_channel.send(embed=await answer_embed(title="Наказание истекло!",text="Наказание снято!", 
+                                                            description=f"{member.mention} больше не ограничен в отправке сообщений в канале {channel.name}.", error=False))
         else:
             await member.remove_roles(self.role_timeout)
-            await inter.followup.send(f"{member.mention} больше не ограничен в отправке сообщений")
-
-    async def convert_to_seconds(self, time, time_letter):
-        time_value = int(time[:-3])
-        if time_letter in time_values:
-            return time_values[time_letter](time_value)
-        else:
-            raise ValueError(f"Неизвестная единица времени: {time_letter}")
+            await self.logs_channel.send(embed=await answer_embed(title="Наказание истекло!",text="Наказание снято!", 
+                                        description=f"{member.mention} больше не ограничен в отправке сообщений" ,error=False))
