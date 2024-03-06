@@ -6,11 +6,14 @@ from cogs_music.MusicCommands.play import PlayCommand
 from cogs_music.MusicCommands.stop import StopCommand
 from cogs_music.MusicCommands.pause import PauseCommand
 from cogs_music.MusicCommands.resume import ResumeCommand
+from cogs_music.music_utilits import MusicUtilits
 from config import SERVER_ID
 
 class MusicModule(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.music_u = MusicUtilits()
+
         self.play = PlayCommand(self.bot)
         self.stop = StopCommand()
         self.pause = PauseCommand()
@@ -50,23 +53,23 @@ class MusicModule(commands.Cog):
             btns['pause']['label'] = 'resume'
 
             await self.pause_music(inter)
-            await self.play.edit_original_message(inter, server_id=self.play.server_id)
+            await self.music_u.edit_original_message(inter, song_info=self.play.song_info, server_id=self.play.server_id)
             
         elif custom_id == 'resume':
             btns['pause']['emoji'] = '⏸️'
             btns['pause']['label'] = 'pause'
 
             await self.resume_music(inter)
-            await self.play.edit_original_message(inter, server_id=self.play.server_id)
+            await self.music_u.edit_original_message(inter, song_info=self.play.song_info, server_id=self.play.server_id)
         elif custom_id == 'repeat':
             if self.play.repeat != True:
                 self.play.repeat = True
                 btns['repeat']['emoji'] = '🔂'
-                await self.play.edit_original_message(inter, server_id=self.play.server_id)
+                await self.music_u.edit_original_message(inter, song_info=self.play.song_info, server_id=self.play.server_id)
             else:
                 self.play.repeat = False
                 btns['repeat']['emoji'] = '🔁'
-                await self.play.edit_original_message(inter, server_id=self.play.server_id)
+                await self.music_u.edit_original_message(inter, song_info=self.play.song_info, server_id=self.play.server_id)
 
             
 
